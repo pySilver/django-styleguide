@@ -540,7 +540,7 @@ DataSource.objects.create()  # PostgreSQL trigger RAISES EXCEPTION
 **Service layer bypass with pgtrigger_ignore:**
 
 ```python
-from mybaze.core.db.pgtrigger import pgtrigger_ignore
+from project.core.pgtrigger import pgtrigger_ignore
 
 class DataSourceService:
     @transaction.atomic
@@ -656,10 +656,10 @@ fetch.save()  # PostgreSQL trigger raises exception
 
 The standard `pgtrigger.ignore()` uses thread-local storage, which doesn't work with
 async
-code. Use the custom `pgtrigger_ignore` wrapper from `mybaze/core/db/pgtrigger.py`:
+code. Use the custom `pgtrigger_ignore` wrapper from `core/pgtrigger.py`:
 
 ```python
-from mybaze.core.db.pgtrigger import pgtrigger_ignore
+from project.core.pgtrigger import pgtrigger_ignore
 
 # As async context manager
 async with pgtrigger_ignore("app.Model:protect_inserts"):
@@ -1591,8 +1591,8 @@ class FetchSettingsSchema(BaseModel):
 
 1. **No namespace collisions** - Import both model and schema without conflicts:
    ```python
-   from mybaze.data_sources.models import DataSource
-   from mybaze.data_sources.schemas import DataSourceSchemaIn, DataSourceSchemaOut
+   from project.data_sources.models import DataSource
+   from project.data_sources.schemas import DataSourceSchemaIn, DataSourceSchemaOut
    # No ambiguity about which is which
    ```
 
@@ -2467,7 +2467,7 @@ Define fixtures in `conftest.py`:
 
 ```python
 import pytest
-from mybaze.brands.tests.factories import BrandFactory, ApprovedBrandFactory
+from project.brands.tests.factories import BrandFactory, ApprovedBrandFactory
 
 @pytest.fixture
 async def brand() -> Brand:
@@ -2599,7 +2599,9 @@ def user_complete_onboarding(user: User) -> User:
     email = email_get_onboarding_template(user=user)
 
     # TaskIQ uses .kiq() instead of .delay()
-    transaction.on_commit(lambda: email_send_task.kiq(email.id))
+    transaction.on_commit(
+        lambda: async_to_sync(email_send_task.kiq)(email.id),
+    )
 
     return user
 ```
